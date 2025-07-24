@@ -79,8 +79,15 @@ lead pack
 Why this split makes sense? 
 
 You want to know if the fast movers in the later start are going to catch the slow movers in the earlier start. Using separate parameters keeps those two 
-cohorts distinct—and lets you tune each independently (for instance, you might only worry about the top 5% of a larger half-marathon field, but the bottom 20% 
-of a dense 10 K).
+cohorts distinct—and lets you tune each independently (for instance, you might only worry about the top 5% of a larger half-marathon field (x = 0.05), but the bottom 20% of a dense 10K (y = 0.20). 
+
+```bash
+python run_congestion.py your_pace_data.csv 
+  --prev_event 10K --curr_event Half \
+  --start_prev 420 --start_curr 460 \
+  --x 0.05 --y 0.20 \
+  --overlaps_file overlaps.csv
+```
 
 #### Multi-Event Check
 
