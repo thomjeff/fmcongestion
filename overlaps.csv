@@ -1,0 +1,10 @@
+﻿Event,Start,End,Overlaps
+10K,0,3,"Half, Full"
+10K,3,5,Full
+10K,6,10,"Half, Full"
+Half,0,7.5,"10K, Full"
+Half,7.6,42.2,Full
+Full,0,3,"10K, Half"
+Full,3,5,10K
+Full,16,18,10K
+Full,16,42,Half
