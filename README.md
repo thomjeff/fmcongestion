@@ -67,6 +67,21 @@ python run_congestion.py your_pace_data.csv   --prev_event 10K --curr_event Half
 - `--x` and `--y` define top/bottom fractions (e.g., 0.1 for 10%).  
 - Outputs whether the fastest group of the upcoming event will catch the slowest group of the preceding event.
 
+- x governs the fastest runners in the upcoming (curr_event) wave: you take the x-th quantile of curr_event finish times to represent the speed floor of that
+lead pack
+- y governs the slowest runners in the preceding (prev_event) wave: you take the (1–y)-th quantile of prev_event finish times to represent the speed ceiling of that back pack. They are not symmetrical. In other words:
+
+| Variable  | Applies To  | Interpretation              | 
+|-----------|-------------|--------------------------   |
+|     x     | curr_event  | Top x fraction (fastest)    |
+|     y     | prev_event  | Bottom y fraction (slowest) |
+
+Why this split makes sense? 
+
+You want to know if the fast movers in the later start are going to catch the slow movers in the earlier start. Using separate parameters keeps those two 
+cohorts distinct—and lets you tune each independently (for instance, you might only worry about the top 5% of a larger half-marathon field, but the bottom 20% 
+of a dense 10 K).
+
 #### Multi-Event Check
 
 ```bash
