@@ -1,0 +1,16 @@
+# Changelog
+
+## [v0.5.0] – 2025-07-24
+### Added
+- First cut at a simple calculation of whether runners of two different events will overlap.
+- Support for overlaps where runners in two different events will share the course.
+- Using 2025 pace data.
+
+## [v1.0.0] – 2025-08-01
+### Added
+- Fully vectorized overlap detection script (`detect_overlap.py`) with acute bottleneck ranking (`peak_ratio`) and exportable summary.  
+- README updated with usage, definitions, dashboard ingestion guidance, and known gotchas.  
+- Excel templates: `summary_template.xlsx`, `summary_dashboard.xlsx`.  
+- Support for ranking toggles, normalized metrics, and metadata in export.  
+- Overlaps CSV format with descriptions.
+- Using 2025 pace data with bib numbers to track first and last runner.
