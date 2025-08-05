@@ -1,3 +1,5 @@
+![Alt text](images/repo_image.jpg)
+
 # Race Congestion Detection - README
 
 ## Overview
