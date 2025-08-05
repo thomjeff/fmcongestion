@@ -1,151 +1,135 @@
-![Alt text](images/repo_image.jpg)
+# Race Congestion Detection Suite
 
-# Race Congestion Detection - README
+A modular Python toolkit to analyze and mitigate on-course congestion among running events. This repository offers two primary approaches:
 
-## Overview
-This tool analyzes overlapping race events (e.g., 10K, Half, Full) to identify **acute bottlenecks** and sustained interaction zones by comparing runners' arrival times on shared course segments. It uses runner pace and event start times to compute overlaps and ranks segments either by **acute severity (peak ratio)** or **total interaction volume (intensity)**.
+- **Basic Congestion Check** (without route overlap constraints)  
+  - `start_time_calculator_v2.py`  
+  - `run_congestion.py`  
+  - `run_congestion_multi.py`
 
-## Key Concepts
+- **Enhanced Overlap-Aware Check**  
+  - `start_time_detection.py` (updated)  
+  - Updated `run_congestion.py`  
+  - Updated `run_congestion_multi.py`
 
-### Intensity
-Cumulative count of overlapping events across the entire segment. At each distance step (default 0.01 km), every pair of runners (one from each event) whose arrival times at that point differ by no more than the `--time-window` (seconds) contributes one to intensity. This reflects total “interaction work” and is influenced by segment length and field sizes.
+---
 
-### Intensity per km
-`intensity / segment_length`. Normalizes intensity by distance to highlight dense interactions on shorter segments.
+## Table of Contents
 
-### Peak Congestion
-Maximum number of distinct runners (sum of both events) simultaneously overlapping at any single distance step within the segment. Highlights instantaneous crowding.
+1. [Prerequisites](#prerequisites)  
+2. [Installation](#installation)  
+3. [Usage](#usage)  
+   - [Basic Check](#basic-check)  
+   - [Overlap-Aware Check](#overlap-aware-check)  
+4. [Configuration](#configuration)  
+5. [File Descriptions](#file-descriptions)  
+6. [License](#license)
 
-### Peak Ratio
-`peak_congestion / (total_prev + total_curr)`. Ratio of the peak congested cohort to the combined field size. This is the acute bottleneck metric; higher values indicate a larger proportion of the participants are in conflict at peak.
+---
 
-## File Inputs
+## Prerequisites
 
-### your_pace_data.csv
-Columns (case-insensitive):
-- `event`: Event name (e.g., Full, Half, 10K)
-- `runner_id`: Unique identifier for a runner (synthetic IDs starting at 1000 recommended)
-- `pace`: Pace in minutes per kilometer (do **not** convert from seconds; keep as min/km)
-- `distance`: Total event distance (used for filtering, can be kept per runner if consistent)
+- Python 3.7 or higher  
+- [pandas](https://pandas.pydata.org/)  
 
-### overlaps.csv
-Defines overlapping segments. Required columns:
-- `event`: Earlier-start event (prev_event)
-- `start`: Segment start in km (float)
-- `end`: Segment end in km (float)
-- `overlapswith`: Later-start event (curr_event)
-- `description`: (optional) human-readable label for the segment
-
-Example row:
+```bash
+pip install pandas
 ```
-Full,29.03,37.00,Half,"Full return leg"
-```
+
+---
+
+## Installation
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/your-org/race-congestion.git
+   cd race-congestion
+   ```
+2. (Optional) Create and activate a virtual environment:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install pandas
+   ```
+
+---
 
 ## Usage
 
-Make the script executable (permissions issue encountered if omitted):
+### Basic Check
+
+#### Two-Event Check
+
 ```bash
-chmod +x detect_overlap.py
+python run_congestion.py your_pace_data.csv   --prev_event 10K --curr_event Half   --start_prev 420 --start_curr 460   --x 0.1 --y 0.1
 ```
-If you get `zsh: permission denied: ./detect_overlap.py`, ensure:
-- Executable bit is set (use `chmod +x detect_overlap.py`)
-- You're in the correct directory containing the script
-- You invoke with `./detect_overlap.py` or `python ./detect_overlap.py`
 
-Run analysis:
+- `--x` and `--y` define top/bottom fractions (e.g., 0.1 for 10%).  
+- Outputs whether the fastest group of the upcoming event will catch the slowest group of the preceding event.
+
+#### Multi-Event Check
+
 ```bash
-python ./detect_overlap.py your_pace_data.csv overlaps.csv   --start-times Full=420 10K=440 Half=460   --time-window 60 --step 0.01 --verbose   --export-summary summary.csv
+python run_congestion_multi.py your_pace_data.csv   --event Full --start 420   --event 10K  --start 440   --event Half --start 460   --x 0.1 --y 0.1
 ```
 
-### Flags
-- `--start-times` / `-s`: Required. Event start times in minutes since midnight (e.g., `Full=420` is 7:00 AM).  
-- `--time-window`: Seconds tolerance for declaring an overlap (default 60).  
-- `--step`: Distance resolution in km (default 0.01 = 10 meters). Smaller increases accuracy at cost of runtime.  
-- `--verbose`: Print detailed per-segment output with descriptions and runtime.  
-- `--export-summary`: Path to output CSV with full summary.  
-- `--rank-by`: Ranking metric for summary. Choices: `intensity` or `peak_ratio`. Default is `peak_ratio` to focus on acute bottlenecks.
+- Evaluates all pairwise overlaps among provided events.
 
-## Output
-Console output includes:
-- Segment-by-segment breakdown:
-  - Overlap segment and description  
-  - Field sizes (`total_prev` / `total_curr`)  
-  - First overlap (time, km, bibs)  
-  - Interaction Intensity (cumulative events)  
-  - Peak congestion and its composition  
-  - Unique overlapping pairs  
-  - Segment runtime  
+---
 
-- Summary table ranked by the chosen metric (peak ratio or intensity), showing:
-  - `PeakRatio`, `Peak`, `Intensity/km`, `Intensity`, `DistinctPairs`, segment description.
+## Overlap-Aware Check
 
-- CSV (`summary.csv`) contains detailed columns for dashboard ingestion, including metadata (start times, window, first overlap details, runtime, etc.)
+When routes share only partial segments, supply an overlaps CSV (`overlaps.csv`) with columns:
 
-## Suggested Dashboard Ingestion
-- Load `summary.csv` into Excel via Data > From Text/CSV.  
-- Format `peak_congestion_ratio` as percentage.  
-- Pivot or sort by `PeakRatio` to surface acute bottlenecks.  
-- Visualizations: bar chart of top segments by PeakRatio, scatter plot of `Intensity/km` vs `PeakRatio` with bubble size = `peak_congestion`.  
-- Drill-in: display first overlap details, field sizes, and segment description for chosen hotspots.
+| Event | Start | End | Overlaps          |
+|-------|-------|-----|-------------------|
+| 10K   | 0     | 3   | Half, Full        |
+| Half  | 3     | 6   | Full              |
+| ...   | ...   | ... | ...               |
 
-## Troubleshooting
+### Two-Event with Overlaps
 
-- **Permission denied executing script:** Run `chmod +x detect_overlap.py` and ensure you're calling `./detect_overlap.py` from the folder containing it.  
-- **Missing input file error (e.g., overlaps.csv):** Verify filenames are correct, paths are relative to current directory, and spelling/casing matches.  
-- **Slow performance:** The default logic is vectorized for speed, but high runner counts and small `--step` increase compute. Consider increasing `--step` to 0.02 or 0.05 for exploratory runs.  
-- **Metric confusion:**  
-  - Use `--rank-by peak_ratio` to prioritize acute bottlenecks (default).  
-  - Use `--rank-by intensity` to see hotspots with the most total interaction volume.
-
-## Example Interpretation
-
+```bash
+python run_congestion.py your_pace_data.csv   --prev_event 10K --curr_event Half   --start_prev 420 --start_curr 460   --x 0.1 --y 0.1   --overlaps_file overlaps.csv
 ```
-01. Full vs 10K 16.00km–20.52km (Full/10K Friel to Queen Sq. Loop): PeakRatio=83.47%, Peak=823, Intensity/km=286174.8, Intensity=1,293,510, DistinctPairs=9,811
+
+- Catches are only valid if they occur within shared segments defined in `overlaps.csv`.
+
+### Multi-Event with Overlaps
+
+```bash
+python run_congestion_multi.py your_pace_data.csv   --event Full --start 420   --event 10K  --start 440   --event Half --start 460   --x 0.1 --y 0.1   --overlaps_file overlaps.csv
 ```
-Meaning: At that segment, 83.47% of the combined field was simultaneously overlapping at peak; the worst point had 823 runners involved. The volume of interactions normalized per km is high, indicating both acute and sustained risk.
 
-## Next Steps / Enhancements
-- Integrate with Excel dashboard (linked charts) for refreshable reporting.  
-- Add automated alerts for segments exceeding a PeakRatio threshold.  
-- Batch-run variation analyses by adjusting start times or time window to simulate mitigation strategies.
+---
 
-## Versioning / Audit
-Include the `generated_at` timestamp from the CSV to track when the analysis was created, along with the exact parameters (`start_prev`, `start_curr`, `time_window`, `step`, `rank-by`) embedded in the export.
+## Configuration
 
-## Recent Fixes / Gotchas
-- **Execution permission issue:** If you see `zsh: permission denied: ./detect_overlap.py`, run `chmod +x detect_overlap.py` or invoke the script directly with Python:  
-  ```bash
-  python ./detect_overlap.py ...
-  ```  
-  This avoids macOS execution-bit or quarantine oddities.
-- **Datetime timezone error:** Earlier versions used `datetime.now(datetime.timezone.utc)`, which failed in some environments. The script now uses `from datetime import datetime, timezone` and `datetime.now(timezone.utc).isoformat()` to produce a proper UTC timestamp.  
-- **JSONL export removed:** The script no longer has `--export-json`; only `--export-summary` (CSV) is supported, simplifying downstream ingestion.
+- **Pace Units**: Minutes/km (or seconds with consistent units).  
+- **Start Times**: Minutes since midnight (e.g., 07:00 → 420).  
+- **Fractions vs Counts**: Use the `_v2` calculator if you prefer absolute counts.
 
-## Summary Dashboard & Template Files (what you downloaded)
-Two Excel artifacts were provided to accelerate analysis and reporting:
+---
 
-### 1. `summary_template.xlsx`
-A lightweight ingestion template:
-- Sheet **Data Template** contains all required headers matching the exported `summary.csv`.  
-- Example row with placeholder values.  
-- Instructions for:
-  - Turning `PeakRatio` into a percentage.  
-  - Computing `SeverityScore` (`=PeakRatio * Intensity_per_km`).  
-  - Ranking by PeakRatio and Intensity using Excel formulas (`RANK.EQ`).  
-  - Building pivot tables and visualizations.
+## File Descriptions
 
-### 2. `summary_dashboard.xlsx`
-A prebuilt dashboard workbook:
-- Sheet **Raw Data** with sample overlapping segment data.  
-- Sheet **Summary Table** with computed ranks (`Rank_PeakRatio`, `Rank_Intensity`), `SeverityScore`, and key metrics arranged for stakeholder consumption.  
-- Charts included:  
-  - **Bar chart** showing top segments by `PeakRatio`.  
-  - **Scatter plot** comparing `Intensity_per_km` vs `PeakRatio` (used as a proxy for bubble chart, since bubble sizing required manual refinement).  
-- Designed to be the basis for executive slides: you can copy/paste or link these charts into PowerPoint or Word for refreshable reporting.
+- **start_time_calculator_v2.py**:  
+  Calculates ideal start offsets for sequential events based on top/bottom quantiles or absolute counts.
 
-### Recommended workflow with those files
-1. Run the updated script to produce `summary.csv`.  
-2. Open `summary_dashboard.xlsx` and replace the sample rows on **Raw Data** with your real `summary.csv` content (or load via copy/paste).  
-3. On **Summary Table**, the computed ranks and severity will auto-update if you keep the same column structure.  
-4. Use the existing charts, or build new ones, to highlight acute bottlenecks (sorted by `PeakRatio`) and compare density vs volume.
+- **start_time_detection.py**:  
+  Determines if and where a catch occurs, enforcing overlap constraints when provided.
 
+- **run_congestion.py**:  
+  CLI wrapper for two-event checks (basic or overlap-aware).
+
+- **run_congestion_multi.py**:  
+  CLI wrapper for multi-event pairwise checks (basic or overlap-aware).
+
+- **overlaps.csv**:  
+  Defines overlapping route segments to filter valid catch zones.
+
+---
+
+## License
+
+Apache 2.0
